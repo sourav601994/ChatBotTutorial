@@ -24,24 +24,9 @@ def get_chatbot_ai_output(input_query) :
             temperature=0.3
         )
 
-        file_path = os.path.join(os.getcwd(), "Leave Policy.pdf")
-        loader = PyPDFLoader(file_path)
-        docs = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        splits = text_splitter.split_documents(docs)
-        vectorstore = InMemoryVectorStore.from_documents(
-            documents=splits, embedding=AzureOpenAIEmbeddings(
-                model="text-embedding-3-large",
-            )
-        )
-
-        retriever = vectorstore.as_retriever()
-        tool = create_retriever_tool(
-            retriever,
-            "policy_retriever",
-            "Searches and returns queries from leave policy.",
-        )
-        tools = [tool]
+        leave_policy_tool = get_retriever_tool(os.path.join(os.getcwd(), "Leave Policy.pdf"),"policy_retriever","Searches and returns queries from leave policy.")
+        weather_policy_tool = get_retriever_tool(os.path.join(os.getcwd(), "AIWFB.pdf"),"weather_retriever","Searches and returns queries from weather document.")
+        tools = [leave_policy_tool,weather_policy_tool]
 
         agent_executor = create_react_agent(model, tools, checkpointer=memory)
 
@@ -51,5 +36,20 @@ def get_chatbot_ai_output(input_query) :
         return list(filter(lambda content : content != "", ai_messages))
         
 
-
+def get_retriever_tool(filepath, retriever_name, retriever_desc ):
+        loader = PyPDFLoader(filepath)
+        docs = loader.load()
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents(docs)
+        vectorstore = InMemoryVectorStore.from_documents(
+            documents=splits, embedding=AzureOpenAIEmbeddings(
+                model="text-embedding-3-large",
+            )
+        )
+        retriever = vectorstore.as_retriever()
+        return create_retriever_tool(
+            retriever,
+            retriever_name,
+            retriever_desc,
+        )
 
